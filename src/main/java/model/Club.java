@@ -21,6 +21,7 @@ public class Club {
     private String uniformImageFile  = "";   // チームユニフォーム画像（Excelから）
     private long   budget;
     private long   weeklySalaryBudget;
+    private int    teamHarmony       = 50;
     private List<Player> squad = new ArrayList<>();
     private int wins, draws, losses;
 
@@ -104,6 +105,11 @@ public class Club {
             .collect(Collectors.toList());
     }
 
+    /** EmotionEngine互換: squadをplayersとして返す */
+    public List<Player> getPlayers() {
+        return squad;
+    }
+
     /** 昇格申請中の下部組織選手 */
     public List<Player> getPendingPromotions() {
         return squad.stream()
@@ -146,6 +152,7 @@ public class Club {
     public String       getUniformImageFile()   { return uniformImageFile; }
     public long         getBudget()             { return budget; }
     public long         getWeeklySalaryBudget() { return weeklySalaryBudget; }
+    public int          getTeamHarmony()        { return teamHarmony; }
     public List<Player> getSquad()              { return squad; }
     public int          getWins()               { return wins; }
     public int          getDraws()              { return draws; }
@@ -158,6 +165,7 @@ public class Club {
     public void setBreed(String v)              { this.breed = v; }
     public void setUniformImageFile(String v)   { this.uniformImageFile = v != null ? v : ""; }
     public void setBudget(long v)               { this.budget = v; }
+    public void setTeamHarmony(int v)           { this.teamHarmony = Math.max(0, Math.min(100, v)); }
 
     @Override public String toString() {
         return String.format("%s [%s] %s | 予算:¥%,d | %dW-%dD-%dL",
