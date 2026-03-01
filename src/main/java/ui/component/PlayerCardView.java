@@ -56,11 +56,11 @@ public class PlayerCardView extends VBox {
             size.w, size.h
         );
 
-        // slump状態なら赤い点を右上に表示
-        if (player.getMood() != null &&
-                player.getMood().toString().equals("slump")) {
-            StackPane.setAlignment(buildSlumpDot(), javafx.geometry.Pos.TOP_RIGHT);
-            imgBox.getChildren().add(buildSlumpDot());
+        // スピリット低下時はslump扱いで赤い点を表示
+        if (isSlump(player)) {
+            javafx.scene.shape.Circle dot = buildSlumpDot();
+            StackPane.setAlignment(dot, javafx.geometry.Pos.TOP_RIGHT);
+            imgBox.getChildren().add(dot);
         }
 
         // ── 名前ラベル ──────────────────────────────────────────
@@ -101,6 +101,11 @@ public class PlayerCardView extends VBox {
         dot.setStroke(Color.web("#0d0d22"));
         dot.setStrokeWidth(1.5);
         return dot;
+    }
+
+    /** 旧mood実装の代替: spiritが一定以下ならslump表示 */
+    private boolean isSlump(Player player) {
+        return player != null && player.getSpirit() <= 40;
     }
 
     /** 犬種の英語名を日本語に変換 */

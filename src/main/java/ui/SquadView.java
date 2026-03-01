@@ -84,6 +84,7 @@ public class SquadView extends VBox {
                 case BENCH      -> "🪑";
                 case INACTIVE   -> "🚑";
                 case ACADEMY    -> "🏟️";
+                case RETIRED    -> "🕊️";
             };
             String tabLabel = icon + " " + role.label + " (" + group.size() + ")";
             Tab tab = new Tab(tabLabel, buildRolePane(group, role));
@@ -118,6 +119,7 @@ public class SquadView extends VBox {
             case BENCH      -> "ベンチ要員 — 練習参加のみ、試合出場不可";
             case INACTIVE   -> "スカッド外 — 怪我・ペナルティ等で一時離脱";
             case ACADEMY    -> "下部組織 — 昇格申請でスカッドに加えられます（移籍>下部組織）";
+            case RETIRED    -> "引退済み選手 — 試合・育成の対象外";
         };
         Label descLbl = new Label(desc);
         descLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#AAAACC;-fx-padding:0 0 6 0;");

@@ -49,12 +49,12 @@ public class SpecialMoveCardView extends VBox {
 
         // ── タイプ・パワーバッジ ────────────────────────────────
         String typeIcon = switch (move.getMoveType()) {
-            case "SHOOT"   -> "🔥 シュート";
-            case "DRIBBLE" -> "💨 ドリブル";
-            case "TACKLE"  -> "💥 タックル";
-            case "SAVE"    -> "🛡 セーブ";
-            case "SPIRIT"  -> "✨ 精神";
-            default        -> move.getMoveType();
+            case SHOOT   -> "🔥 シュート";
+            case DRIBBLE -> "💨 ドリブル";
+            case TACKLE  -> "💥 タックル";
+            case SAVE    -> "🛡 セーブ";
+            case SPIRIT  -> "✨ 精神";
+            default      -> move.getMoveType().name();
         };
 
         Label typeLabel = new Label(typeIcon + "  PWR " + move.getPower());

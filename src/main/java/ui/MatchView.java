@@ -87,7 +87,6 @@ public class MatchView extends javafx.scene.layout.StackPane {
     public MatchView(MainApp app) {
         this.app = app;
         setStyle("-fx-background-color:#06060f;");
-        setSpacing(0);
         buildUI();
     }
 
@@ -503,14 +502,16 @@ public class MatchView extends javafx.scene.layout.StackPane {
         cutinOverlay.setOpacity(0);
         cutinBox.setTranslateX(-500);
 
-        ParallelTransition enter = new ParallelTransition(
-            new FadeTransition(Duration.millis(150), cutinOverlay) {{
-                setFromValue(0); setToValue(1);
-            }},
-            new TranslateTransition(Duration.millis(200), cutinBox) {{
-                setFromX(-500); setToX(0); setInterpolator(Interpolator.EASE_OUT);
-            }}
-        );
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(150), cutinOverlay);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+
+        TranslateTransition slideIn = new TranslateTransition(Duration.millis(200), cutinBox);
+        slideIn.setFromX(-500);
+        slideIn.setToX(0);
+        slideIn.setInterpolator(Interpolator.EASE_OUT);
+
+        ParallelTransition enter = new ParallelTransition(fadeIn, slideIn);
 
         PauseTransition hold = new PauseTransition(Duration.millis(1400));
 

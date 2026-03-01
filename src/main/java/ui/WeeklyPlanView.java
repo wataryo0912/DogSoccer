@@ -321,10 +321,11 @@ public class WeeklyPlanView extends VBox {
         calendarPane.getChildren().clear();
         int cur = season.getCurrentWeek();
         for (int w = 1; w <= SeasonManager.TOTAL_WEEKS; w++) {
-            WeekRecord rec = season.getRecordForWeek(w);
-            boolean isCurrent  = w == cur;
-            boolean isFuture   = w > cur;
-            boolean isMatchWk  = season.getSchedule().stream().anyMatch(s -> s.getWeek() == w);
+            final int week = w;
+            WeekRecord rec = season.getRecordForWeek(week);
+            boolean isCurrent  = week == cur;
+            boolean isFuture   = week > cur;
+            boolean isMatchWk  = season.getSchedule().stream().anyMatch(s -> s.getWeek() == week);
 
             Rectangle cell = new Rectangle(13, 13);
             cell.setArcWidth(3); cell.setArcHeight(3);
@@ -345,7 +346,7 @@ public class WeeklyPlanView extends VBox {
                     default       -> Color.web("#333344");
                 });
             }
-            if (SeasonManager.TRANSFER_WINDOWS.contains(w) && !isCurrent) {
+            if (SeasonManager.TRANSFER_WINDOWS.contains(week) && !isCurrent) {
                 cell.setStroke(Color.web("#8b4513")); cell.setStrokeWidth(1);
             }
             calendarPane.getChildren().add(cell);

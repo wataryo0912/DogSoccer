@@ -374,12 +374,9 @@ public class ScoutView extends VBox {
                 Alert c = new Alert(Alert.AlertType.CONFIRMATION);
                 c.setTitle("昇格申請の確認");
                 c.setHeaderText("⬆️  "+p.getFullName()+" を来週スカッドに登録しますか？");
-                c.setContentText("OVR:"+p.getOverall()+"  POT:"+p.getPotential()
-                    +"
-週給: ¥"+String.format("%,d",p.getSalary())
-                    +"
-
-※ 翌週の週進行後にスカッドへ昇格します。");
+                c.setContentText("OVR:" + p.getOverall() + "  POT:" + p.getPotential()
+                    + "\nSalary: ¥" + String.format("%,d", p.getSalary())
+                    + "\n\n* Promotion is applied after next weekly progress.");
                 c.getButtonTypes().setAll(
                     new ButtonType("申請する",ButtonBar.ButtonData.OK_DONE),
                     new ButtonType("キャンセル",ButtonBar.ButtonData.CANCEL_CLOSE));
@@ -464,7 +461,9 @@ public class ScoutView extends VBox {
             if (group.isEmpty()) continue;
             String rc = switch(role){
                 case REGISTERED->"#44FF88"; case BENCH->"#FFD700";
-                case INACTIVE->"#FF6666"; case ACADEMY->"#44AAFF";};
+                case INACTIVE->"#FF6666"; case ACADEMY->"#44AAFF";
+                default -> "#AAAAAA";
+            };
             Label rh = new Label(role.label+"  ("+group.size()+"名)");
             rh.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:"+rc
                 +";-fx-padding:8 0 4 0;");
@@ -495,12 +494,17 @@ public class ScoutView extends VBox {
 
         HBox btns = new HBox(5);
         for (PlayerRole t : PlayerRole.values()) {
+            if (t == PlayerRole.RETIRED) continue;
             if (t==cur) continue;
             if (p.isCaptain()&&(t==PlayerRole.ACADEMY||t==PlayerRole.INACTIVE)) continue;
             String bg = switch(t){case REGISTERED->"#1A3A1A";case BENCH->"#3A3A00";
-                case INACTIVE->"#3A1A1A";case ACADEMY->"#1A2A3A";};
+                case INACTIVE->"#3A1A1A";case ACADEMY->"#1A2A3A";
+                default -> "#2A2A2A";
+            };
             String fg = switch(t){case REGISTERED->"#44FF88";case BENCH->"#FFD700";
-                case INACTIVE->"#FF6666";case ACADEMY->"#44AAFF";};
+                case INACTIVE->"#FF6666";case ACADEMY->"#44AAFF";
+                default -> "#CCCCCC";
+            };
             Button b = new Button(t.label+"へ");
             b.setStyle("-fx-background-color:"+bg+";-fx-text-fill:"+fg
                 +";-fx-font-size:10px;-fx-padding:3 7;-fx-background-radius:4;-fx-cursor:hand;");

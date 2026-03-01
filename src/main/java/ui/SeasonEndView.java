@@ -267,9 +267,8 @@ public class SeasonEndView extends StackPane {
                 card.getChildren().add(l);
             }
             Label note = label(
-                "※ 引退選手はシーズン終了後にスカッドから除外されます。
-"
-                + "　転生選手は指定シーズン開始時に下部組織として復活します。",
+                "* Retired players are removed from squads after season processing."
+                + " Reincarnated players join academy at the start of the next season.",
                 "#AAAACC", 11);
             note.setWrapText(true);
             card.getChildren().add(note);
@@ -327,7 +326,6 @@ public class SeasonEndView extends StackPane {
             selector.getChildren().add(tierLabel);
 
             HBox clubRow = new HBox(8);
-            clubRow.setWrapText(true);
             for (Club c : league.getClubs()) {
                 boolean isCurrentClub = c.getName().equals(playerClub.getName());
                 Button btn = new Button(c.getName());

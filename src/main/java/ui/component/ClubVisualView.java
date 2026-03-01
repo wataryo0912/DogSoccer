@@ -67,8 +67,12 @@ public class ClubVisualView {
      *   hbox.getChildren().add(uni);
      */
     public static StackPane uniform(Club club) {
+        String uniformFile = club.getUniformImageFile();
+        if (uniformFile == null || uniformFile.isBlank()) {
+            uniformFile = "uniform_default.png";
+        }
         return ImageManager.uniform(
-            uniformFileName(club.getPhilosophy()),
+            uniformFile,
             club.getName()
         );
     }
