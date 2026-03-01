@@ -1,0 +1,28 @@
+# ビルド成果物
+target/
+*.class
+*.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# データベース設定（個人情報を含むため除外）
+src/main/resources/db.properties
+
+# 画像（DALL-Eで生成後に各自追加）
+src/main/resources/images/players/*.png
+src/main/resources/images/emblems/*.png
+src/main/resources/images/uniforms/*.png
+# 必殺技プレビューは除外しない（一部すでに存在するため）
+# src/main/resources/images/moves/*.png
+
+# バックアップ
+src_bak/

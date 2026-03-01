@@ -1,0 +1,105 @@
+/* Soccer Manager - スタイルシート */
+
+.root {
+    -fx-background-color: #1a1a2e;
+    -fx-font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", "MS Gothic", sans-serif;
+}
+
+.table-view {
+    -fx-background-color: #16213e;
+    -fx-border-color: #0f3460;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.table-view .column-header {
+    -fx-background-color: #0f3460;
+    -fx-text-fill: #a8dadc;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #0f3460;
+}
+
+.table-row-cell {
+    -fx-background-color: #16213e;
+    -fx-text-fill: white;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #1a2540;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #e94560;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #0f3460;
+}
+
+.table-cell {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 12px;
+    -fx-alignment: CENTER;
+}
+
+.combo-box {
+    -fx-background-color: #16213e;
+    -fx-text-fill: white;
+    -fx-border-color: #0f3460;
+    -fx-border-radius: 4;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: white;
+    -fx-background-color: #16213e;
+}
+
+.list-view {
+    -fx-background-color: #16213e;
+    -fx-border-color: #0f3460;
+}
+
+.list-cell {
+    -fx-background-color: #16213e;
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 12px;
+    -fx-padding: 6 10;
+}
+
+.list-cell:selected {
+    -fx-background-color: #e94560;
+    -fx-text-fill: white;
+}
+
+.list-cell:odd {
+    -fx-background-color: #1a2540;
+}
+
+.scroll-bar {
+    -fx-background-color: #0f3460;
+}
+
+.text-area {
+    -fx-background-color: #16213e;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #0f3460;
+    -fx-border-radius: 6;
+}
+
+.text-area .content {
+    -fx-background-color: #16213e;
+}
+
+.progress-bar > .track {
+    -fx-background-color: #0a1628;
+    -fx-background-radius: 4;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: #0f3460;
+    -fx-background-radius: 4;
+}
