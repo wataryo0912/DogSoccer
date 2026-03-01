@@ -4,7 +4,6 @@ import db.DatabaseManager;
 import db.PlayerDao;
 import db.SpecialMoveDao;
 import db.ImageDao;
-import service.WeeklyEventService;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -13,7 +12,6 @@ import javafx.scene.image.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import model.*;
-import model.LeagueManager;
 import service.*;
 
 import java.util.ArrayList;
@@ -38,6 +36,7 @@ public class MainApp extends Application {
     public static model.FriendshipManager friendshipManager = new model.FriendshipManager();
     public static service.AcademyService    academyService    = new service.AcademyService();
     public static service.RetirementService retirementService = new service.RetirementService();
+    public static LeagueAIService leagueAIService = new LeagueAIService();
 
     public static MainApp app;
     private Stage        primaryStage;
@@ -110,6 +109,7 @@ public class MainApp extends Application {
         playerClub = allClubs.stream()
             .filter(c -> c.getName().equals("クラブ・ぶん助"))
             .findFirst().orElse(allClubs.get(8));
+        leagueAIService.setPlayerClubName(playerClub.getName());
 
         // 必殺技をDBからロードしてPlayerにセット
         try {
@@ -124,6 +124,7 @@ public class MainApp extends Application {
 
         // スケジュール生成
         season.initSchedule(allClubs, playerClub.getName());
+        leagueAIService.processSeasonStart(allClubs);
         // 仲良し度をDBからロード
         friendshipManager.loadFromDB();
         // 下部組織選手をシード（初回のみ）

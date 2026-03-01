@@ -368,14 +368,34 @@ public class WeeklyPlanView extends VBox {
         MainApp.financeService.processWeeklySalaries(MainApp.playerClub);
         MainApp.gameDataService.saveClub(MainApp.playerClub);
 
-        // ── 週次イベントを生成・適用 ──
+        // ── 出場選手IDを収集（感情システム用） ──────────────
+        // 現状は練習=全員、試合=REGISTERED全員とみなす
+        // 将来は MatchSimulator から実際の出場IDを受け取る
+        java.util.Set<Integer> playedIds = new java.util.HashSet<>();
+        boolean teamWon = false;
+        if (selectedAction == Action.TRAINING || selectedAction == Action.MATCH) {
+            MainApp.playerClub.getRegistered()
+                .forEach(p -> playedIds.add(p.getId()));
+            // 試合結果が result に入っているので「勝利」判定
+            if (result.contains("勝利") || result.contains("WIN")) teamWon = true;
+        }
+
+        // ── 週次イベントを生成・適用（感情システム統合版） ───
         WeeklyEvent event = MainApp.weeklyEventService.generateAndApply(
             MainApp.playerClub,
             season.getCurrentWeek(),
-            season.getCurrentSeason()
+            season.getCurrentSeason(),
+            playedIds,
+            teamWon
         );
         showWeeklyEvent(event);
-        MainApp.gameDataService.saveSquad(MainApp.playerClub); // ステータス変動をDB保存
+        MainApp.gameDataService.saveSquad(MainApp.playerClub);
+
+        // ── AIクラブの週次処理（感情・補強・harmony管理） ────
+        MainApp.leagueAIService.processAllClubs(
+            MainApp.allClubs,
+            season.getCurrentWeek()
+        );
 
         season.advanceWeek(selectedAction, result, MainApp.playerClub.getBudget());
 
