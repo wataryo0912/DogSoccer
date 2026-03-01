@@ -33,7 +33,7 @@ public class MatchView extends javafx.scene.layout.StackPane {
     private Color  AWAY_C    = Color.web(awayColor);
 
     // スコアボード
-    private Label homeScoreLabel, awayScoreLabel, matchTimeLabel;
+    private Label homeScoreLabel, awayScoreLabel, awayNameLabel, matchTimeLabel;
     private ProgressBar timeBar;
 
     // ポゼッション
@@ -75,6 +75,7 @@ public class MatchView extends javafx.scene.layout.StackPane {
     private int        eventIndex;
     private AnimationTimer ballAnimTimer;
     private double targetBallX = 0.5, targetBallY = 0.5;
+    private boolean callbackFired = false;
 
     // コントロール
     private ComboBox<String> speedCombo;
@@ -222,7 +223,7 @@ public class MatchView extends javafx.scene.layout.StackPane {
         awayScoreLabel = new Label("0");
         awayScoreLabel.setStyle("-fx-font-size:40px;-fx-font-weight:bold;-fx-text-fill:#fff;"
             + "-fx-min-width:60;-fx-alignment:CENTER;");
-        Label awayNameLabel = new Label("─");
+        awayNameLabel = new Label("─");
         awayNameLabel.setStyle("-fx-font-size:13px;-fx-text-fill:" + awayColor + ";-fx-font-weight:bold;");
         awayNameLabel.setId("awayNameLabel");
         VBox awayBox = new VBox(2, awayNameLabel, awayScoreLabel);
@@ -413,7 +414,6 @@ public class MatchView extends javafx.scene.layout.StackPane {
         resultTitle = new Label(); resultTitle.setStyle("-fx-font-size:16px;-fx-font-weight:bold;");
         resultScore = new Label(); resultScore.setStyle("-fx-font-size:36px;-fx-font-weight:bold;-fx-text-fill:#fff;");
         resultWinner = new Label(); resultWinner.setStyle("-fx-font-size:13px;-fx-text-fill:#aaa;");
-
         resultPanel.getChildren().addAll(resultTitle, resultScore, resultWinner);
         return resultPanel;
     }
@@ -540,14 +540,15 @@ public class MatchView extends javafx.scene.layout.StackPane {
         eventLogBox.getChildren().clear();
         resultPanel.setVisible(false);
         resultPanel.setManaged(false);
+        callbackFired = false;
         simulateBtn.setDisable(true);
 
         // アウェイチーム名を更新
-        ((VBox)((HBox)getChildren().get(1)).getChildren().get(3))
-            .getChildren().get(0).setStyle(
+        if (awayNameLabel != null) {
+            awayNameLabel.setStyle(
                 "-fx-font-size:13px;-fx-text-fill:" + awayColor + ";-fx-font-weight:bold;");
-        ((Label)((VBox)((HBox)getChildren().get(1)).getChildren().get(3))
-            .getChildren().get(0)).setText(opponent.getName());
+            awayNameLabel.setText(opponent.getName());
+        }
 
         // シミュレーション実行
         events = MainApp.matchSimulator.simulateEvents(MainApp.playerClub, opponent);
@@ -629,9 +630,10 @@ public class MatchView extends javafx.scene.layout.StackPane {
             ballAnimTimer.stop();
             simulateBtn.setDisable(false);
             showResult(evt);
-            // WeeklyPlanViewへ結果を通知
+            // WeeklyPlanViewからの試合は、タブ付き結果ダイアログを表示してから戻す
             if (matchResultCallback != null) {
-                matchResultCallback.accept(events);
+                showPostMatchDialog(evt);
+                fireMatchResultCallback();
             }
         }
     }
@@ -655,5 +657,81 @@ public class MatchView extends javafx.scene.layout.StackPane {
     private java.util.function.Consumer<List<MatchEvent>> matchResultCallback;
     public void setMatchResultCallback(java.util.function.Consumer<List<MatchEvent>> cb) {
         this.matchResultCallback = cb;
+    }
+
+    /**
+     * 試合終了後のタブ付きダイアログ（結果/スタッツ/イベントログ）
+     */
+    private void showPostMatchDialog(MatchEvent last) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("試合結果");
+        dialog.setHeaderText("🏁 試合終了");
+        ButtonType backBtn = new ButtonType("週画面へ戻る", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().setAll(backBtn);
+
+        TabPane tabs = new TabPane();
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        int hg = last.getHomeScore();
+        int ag = last.getAwayScore();
+        String outcome = hg > ag ? "勝利" : hg == ag ? "引き分け" : "敗北";
+
+        VBox summary = new VBox(8,
+            new Label("対戦: " + MainApp.playerClub.getName() + " vs "
+                + (awayNameLabel != null ? awayNameLabel.getText() : "相手クラブ")),
+            new Label("スコア: " + hg + " - " + ag),
+            new Label("結果: " + outcome)
+        );
+        summary.setPadding(new Insets(12));
+        tabs.getTabs().add(new Tab("結果", summary));
+
+        GridPane stats = new GridPane();
+        stats.setHgap(10);
+        stats.setVgap(6);
+        stats.setPadding(new Insets(12));
+        int[] shots = last.getShots();
+        int[] shotsOn = last.getShotsOn();
+        int[] corners = last.getCorners();
+        int[] fouls = last.getFouls();
+        int homePoss = last.getHomePoss();
+        int awayPoss = 100 - homePoss;
+        addStatRow(stats, 0, "シュート", shots[0], shots[1]);
+        addStatRow(stats, 1, "枠内", shotsOn[0], shotsOn[1]);
+        addStatRow(stats, 2, "CK", corners[0], corners[1]);
+        addStatRow(stats, 3, "反則", fouls[0], fouls[1]);
+        addStatRow(stats, 4, "ポゼッション", homePoss, awayPoss);
+        tabs.getTabs().add(new Tab("スタッツ", stats));
+
+        ListView<String> eventList = new ListView<>();
+        for (MatchEvent e : events) {
+            if (e.getType() == Type.PASS || e.getType() == Type.PRESS) continue;
+            eventList.getItems().add(String.format("%2d' %s", e.getMinute(), e.getMessage()));
+        }
+        tabs.getTabs().add(new Tab("イベント", eventList));
+
+        dialog.getDialogPane().setContent(tabs);
+        dialog.getDialogPane().setPrefSize(640, 480);
+        dialog.showAndWait();
+    }
+
+    private void addStatRow(GridPane g, int row, String name, int home, int away) {
+        Label left = new Label(String.valueOf(home));
+        Label mid = new Label(name);
+        Label right = new Label(String.valueOf(away));
+        left.setMinWidth(80);
+        right.setMinWidth(80);
+        left.setStyle("-fx-font-weight:bold;-fx-text-fill:" + homeColor + ";");
+        right.setStyle("-fx-font-weight:bold;-fx-text-fill:" + awayColor + ";");
+        g.add(left, 0, row);
+        g.add(mid, 1, row);
+        g.add(right, 2, row);
+    }
+
+    private void fireMatchResultCallback() {
+        if (callbackFired) return;
+        callbackFired = true;
+        if (matchResultCallback != null) {
+            matchResultCallback.accept(events);
+        }
     }
 }

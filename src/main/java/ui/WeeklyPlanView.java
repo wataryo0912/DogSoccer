@@ -361,7 +361,7 @@ public class WeeklyPlanView extends VBox {
         String result;
         switch (selectedAction) {
             case TRAINING  -> result = executeTraining();
-            case MATCH     -> result = executeMatch(pendingResult);
+            case MATCH     -> { executeMatch(pendingResult); return; }
             case TRANSFER  -> { openTransferView(); return; }
             default        -> result = "─";
         }
@@ -521,6 +521,8 @@ public class WeeklyPlanView extends VBox {
             else MainApp.app.showWeeklyView();
         });
         MainApp.app.setCenterView(mv);
+        // スケジュール試合は画面表示後に自動開始
+        javafx.application.Platform.runLater(() -> mv.startMatch(finalOpp));
     }
 
     private void updateMatchWeekBanner(ScheduledMatch sm) {

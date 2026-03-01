@@ -3,10 +3,15 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Soccer Manager",
+      "name": "Soccer Manager (GUI)",
       "request": "launch",
-      "mainClass": "main.Main",
-      "vmArgs": "--module-path ${env:PATH_TO_FX} --add-modules javafx.controls,javafx.fxml"
+      "mainClass": "main.GuiLauncher"
+    },
+    {
+      "type": "java",
+      "name": "Soccer Manager (Console)",
+      "request": "launch",
+      "mainClass": "main.Main"
     }
   ]
 }
