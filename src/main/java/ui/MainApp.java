@@ -9,6 +9,9 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.*;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import model.*;
@@ -53,10 +56,15 @@ public class MainApp extends Application {
         root = new BorderPane();
         root.setStyle("-fx-background-color:#06060f;");
         root.setTop(buildHeader());
-        root.setLeft(buildSideMenu());
-        showWeeklyView();
+        showMainMenu();
 
         Scene scene = new Scene(root, 1280, 820);
+        // 予期しない拡大縮小（ピンチ/CTRL+ホイール）を無効化
+        scene.addEventFilter(ZoomEvent.ANY, e -> e.consume());
+        scene.addEventFilter(RotateEvent.ANY, e -> e.consume());
+        scene.addEventFilter(ScrollEvent.ANY, e -> {
+            if (e.isControlDown()) e.consume();
+        });
         stage.setTitle("⚽ クラブ・ぶん助 SOCCER MANAGER 🐾");
         stage.setScene(scene);
         stage.show();
@@ -196,12 +204,18 @@ public class MainApp extends Application {
         budgetLabel = new Label();
         budgetLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#a8dadc;");
 
+        Button homeBtn = new Button("🏠 メイン");
+        homeBtn.setStyle("-fx-background-color:#1b1b35;-fx-text-fill:#ffffff;"
+            + "-fx-font-size:11px;-fx-font-weight:bold;-fx-background-radius:8;"
+            + "-fx-padding:4 10;-fx-cursor:hand;");
+        homeBtn.setOnAction(e -> showMainMenu());
+
         Label dbBtn = new Label("💾");
         dbBtn.setStyle("-fx-font-size:11px;-fx-text-fill:rgba(255,255,255,0.2);-fx-cursor:hand;");
         dbBtn.setOnMouseClicked(e -> showDBInfo());
 
         updateHeaderLabels();
-        bar.getChildren().addAll(title, spacer, pointsLabel, budgetLabel, dbBtn);
+        bar.getChildren().addAll(title, spacer, pointsLabel, budgetLabel, homeBtn, dbBtn);
         return bar;
     }
 
@@ -244,12 +258,13 @@ public class MainApp extends Application {
         menu.getChildren().add(t);
 
         for (String[] item : new String[][]{
-            {"📅","シーズン"},{"👥","スカッド"},{"⚽","試合"},{"🔍","スカウト"},{"💰","財務"},{"🤝","仲良し度"}
+            {"🏠","メイン"},{"📅","日程進行"},{"👥","スカッド"},{"⚽","試合"},{"🔍","スカウト"},{"💰","財務"},{"🤝","仲良し度"}
         }) {
             Button btn = menuBtn(item[0] + "  " + item[1]);
             btn.setOnAction(e -> {
                 switch (item[1]) {
-                    case "シーズン" -> showWeeklyView();
+                    case "メイン"  -> showMainMenu();
+                    case "日程進行" -> showWeeklyView();
                     case "スカッド" -> setCenterView(new SquadView(this));
                     case "試合"    -> setCenterView(new MatchView(this));
                     case "スカウト"-> setCenterView(new ScoutView(this));
@@ -281,6 +296,11 @@ public class MainApp extends Application {
     // ─────────────────────────────────────────────────────────
     // 画面遷移
     // ─────────────────────────────────────────────────────────
+    public void showMainMenu() {
+        updateHeaderLabels();
+        root.setCenter(new MainMenuView(this));
+    }
+
     public void showWeeklyView() {
         WeeklyPlanView wv = new WeeklyPlanView(this, season);
         root.setCenter(wv);
