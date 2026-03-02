@@ -458,13 +458,14 @@ public class WeeklyPlanView extends VBox {
             final int  finalAway    = last.getAwayScore();
             final String matchResult = String.format("vs %s  %d-%d",
                 friendlyOpp.getName(), finalHome, finalAway);
-
-            MainApp.gameDataService.saveMatchResult(MainApp.playerClub, friendlyOpp, events);
-            MainApp.app.updateHeaderLabels();
-            MainApp.financeService.processWeeklySalaries(MainApp.playerClub);
-            MainApp.gameDataService.saveClub(MainApp.playerClub);
-            season.advanceWeek(Action.MATCH, matchResult, MainApp.playerClub.getBudget());
-            MainApp.app.showWeeklyView();
+            showPostMatchDialog(events, friendlyOpp.getName(), finalHome, finalAway, () -> {
+                MainApp.gameDataService.saveMatchResult(MainApp.playerClub, friendlyOpp, events);
+                MainApp.app.updateHeaderLabels();
+                MainApp.financeService.processWeeklySalaries(MainApp.playerClub);
+                MainApp.gameDataService.saveClub(MainApp.playerClub);
+                season.advanceWeek(Action.MATCH, matchResult, MainApp.playerClub.getBudget());
+                MainApp.app.showWeeklyView();
+            });
         });
         MainApp.app.setCenterView(mv);
         mv.startMatch(opp);
@@ -515,14 +516,103 @@ public class WeeklyPlanView extends VBox {
             final String result  = String.format("⚽ %s %d-%d %s [%s]",
                 MainApp.playerClub.getName(), playerGoals, opponentGoals,
                 finalOpp.getName(), outcome);
-
-            season.advanceWeek(Action.MATCH, result, MainApp.playerClub.getBudget());
-            if (season.isSeasonOver()) showSeasonEnd();
-            else MainApp.app.showWeeklyView();
+            showPostMatchDialog(events, finalOpp.getName(), playerGoals, opponentGoals, () -> {
+                season.advanceWeek(Action.MATCH, result, MainApp.playerClub.getBudget());
+                if (season.isSeasonOver()) showSeasonEnd();
+                else MainApp.app.showWeeklyView();
+            });
         });
         MainApp.app.setCenterView(mv);
         // スケジュール試合は画面表示後に自動開始
         javafx.application.Platform.runLater(() -> mv.startMatch(finalOpp));
+    }
+
+    private void showPostMatchDialog(List<MatchEvent> events, String opponentName,
+                                     int playerGoals, int opponentGoals,
+                                     Runnable onClose) {
+        if (events == null || events.isEmpty()) {
+            if (onClose != null) onClose.run();
+            return;
+        }
+
+        MatchEvent last = events.get(events.size() - 1);
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("試合結果");
+        dialog.setHeaderText("🏁 試合終了");
+        ButtonType backBtn = new ButtonType("週画面へ戻る", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().setAll(backBtn);
+
+        TabPane tabs = new TabPane();
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        String outcome = playerGoals > opponentGoals ? "勝利"
+            : playerGoals == opponentGoals ? "引き分け" : "敗北";
+        VBox summary = new VBox(8,
+            new Label("対戦: " + MainApp.playerClub.getName() + " vs " + opponentName),
+            new Label("スコア: " + playerGoals + " - " + opponentGoals),
+            new Label("結果: " + outcome)
+        );
+        summary.setPadding(new Insets(12));
+        tabs.getTabs().add(new Tab("結果", summary));
+
+        GridPane stats = new GridPane();
+        stats.setHgap(10);
+        stats.setVgap(6);
+        stats.setPadding(new Insets(12));
+        int[] shots = last.getShots();
+        int[] shotsOn = last.getShotsOn();
+        int[] corners = last.getCorners();
+        int[] fouls = last.getFouls();
+        int homePoss = last.getHomePoss();
+        int awayPoss = 100 - homePoss;
+        addStatRow(stats, 0, "シュート", shots[0], shots[1], "#4a7a35", "#00c8ff");
+        addStatRow(stats, 1, "枠内", shotsOn[0], shotsOn[1], "#4a7a35", "#00c8ff");
+        addStatRow(stats, 2, "CK", corners[0], corners[1], "#4a7a35", "#00c8ff");
+        addStatRow(stats, 3, "反則", fouls[0], fouls[1], "#4a7a35", "#00c8ff");
+        addStatRow(stats, 4, "ポゼッション", homePoss, awayPoss, "#4a7a35", "#00c8ff");
+        tabs.getTabs().add(new Tab("スタッツ", stats));
+
+        ListView<String> eventList = new ListView<>();
+        for (MatchEvent e : events) {
+            if (e.getType() == MatchEvent.Type.PASS || e.getType() == MatchEvent.Type.PRESS) continue;
+            eventList.getItems().add(String.format("%2d' %s", e.getMinute(), e.getMessage()));
+        }
+        tabs.getTabs().add(new Tab("イベント", eventList));
+
+        dialog.getDialogPane().setContent(tabs);
+        dialog.getDialogPane().setPrefSize(680, 500);
+        final boolean[] closed = { false };
+        Runnable closeOnce = () -> {
+            if (closed[0]) return;
+            closed[0] = true;
+            if (onClose != null) onClose.run();
+        };
+
+        javafx.application.Platform.runLater(() -> {
+            try {
+                // アニメーション処理中から呼ばれても、次Pulseでモーダル表示する
+                dialog.showAndWait();
+                closeOnce.run();
+            } catch (IllegalStateException ex) {
+                // まれにレイアウト/アニメーション中と判定される環境向けフォールバック
+                dialog.setOnHidden(e -> closeOnce.run());
+                javafx.application.Platform.runLater(dialog::show);
+            }
+        });
+    }
+
+    private void addStatRow(GridPane g, int row, String name, int home, int away,
+                            String homeColor, String awayColor) {
+        Label left = new Label(String.valueOf(home));
+        Label mid = new Label(name);
+        Label right = new Label(String.valueOf(away));
+        left.setMinWidth(80);
+        right.setMinWidth(80);
+        left.setStyle("-fx-font-weight:bold;-fx-text-fill:" + homeColor + ";");
+        right.setStyle("-fx-font-weight:bold;-fx-text-fill:" + awayColor + ";");
+        g.add(left, 0, row);
+        g.add(mid, 1, row);
+        g.add(right, 2, row);
     }
 
     private void updateMatchWeekBanner(ScheduledMatch sm) {

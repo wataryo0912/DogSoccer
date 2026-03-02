@@ -39,20 +39,48 @@ public class DatabaseConfig {
             if (is != null) {
                 props.load(is);
                 loaded = true;
-                System.out.println("[DB] db.properties 読み込み完了: type=" + getDbType());
+                applyOverrides();
+                System.out.println("[DB] db.properties 読み込み完了(classpath): type=" + getDbType());
                 return;
             }
         } catch (IOException ignored) {}
 
-        // なければ resources/ フォルダを直接探す
-        try (InputStream is = new java.io.FileInputStream("resources/db.properties")) {
-            props.load(is);
-            loaded = true;
-            System.out.println("[DB] resources/db.properties 読み込み完了: type=" + getDbType());
-        } catch (IOException e) {
-            System.out.println("[DB] db.properties が見つかりません。SQLiteをデフォルト使用します");
-            props.setProperty("db.type", "sqlite");
-            props.setProperty("sqlite.file", "soccer_manager.db");
+        // なければローカルファイルを順に探す
+        String[] candidates = {
+            "src/main/resources/db.properties",
+            "resources/db.properties",
+            "db.properties"
+        };
+        for (String path : candidates) {
+            java.io.File f = new java.io.File(path);
+            if (!f.exists()) continue;
+            try (InputStream is = new java.io.FileInputStream(f)) {
+                props.load(is);
+                loaded = true;
+                applyOverrides();
+                System.out.println("[DB] db.properties 読み込み完了(" + path + "): type=" + getDbType());
+                return;
+            } catch (IOException ignored) {
+                // 次候補へ
+            }
+        }
+
+        System.out.println("[DB] db.properties が見つかりません。SQLiteをデフォルト使用します");
+        props.setProperty("db.type", "sqlite");
+        props.setProperty("sqlite.file", "soccer_manager.db");
+        applyOverrides();
+    }
+
+    /** JVM引数・環境変数で設定上書き（優先順位: -Ddb.type > DB_TYPE） */
+    private static void applyOverrides() {
+        String sysType = System.getProperty("db.type");
+        if (sysType != null && !sysType.isBlank()) {
+            props.setProperty("db.type", sysType.trim());
+            return;
+        }
+        String envType = System.getenv("DB_TYPE");
+        if (envType != null && !envType.isBlank()) {
+            props.setProperty("db.type", envType.trim());
         }
     }
 

@@ -141,7 +141,9 @@ public class MainApp extends Application {
     }
 
     private void seedRivalPlayers() {
-        List<Club> rivals = allClubs.subList(1, allClubs.size());
+        List<Club> rivals = allClubs.stream()
+            .filter(c -> !"クラブ・ぶん助".equals(c.getName()))
+            .toList();
         String[][] seeds = {
             {"ソニック","ボーダーコリー","FW","92"}, {"キング","ジャーマンシェパード","MF","90"},
             {"タンク","セントバーナード","DF","89"},  {"フラッシュ","グレーハウンド","FW","91"},

@@ -8,6 +8,7 @@ import model.Player;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.net.URL;
 import java.util.*;
 
 /**
@@ -39,6 +40,7 @@ import java.util.*;
 public class ExcelLoaderService {
 
     private static final String RESOURCES = "resources/";
+    private static final String DATA_DIR = "data/";
 
     private final ClubDao   clubDao   = new ClubDao();
     private final PlayerDao playerDao = new PlayerDao();
@@ -53,11 +55,11 @@ public class ExcelLoaderService {
      * 既にDBに同じ選手・チームがあればスキップ（冪等）。
      */
     public void loadFromCSV(List<Club> allClubs) {
-        String playersCSV = RESOURCES + "players.csv";
-        String teamsCSV   = RESOURCES + "teams.csv";
+        String playersCSV = resolveDataCsvPath("players.csv");
+        String teamsCSV   = resolveDataCsvPath("teams.csv");
 
-        if (!new File(playersCSV).exists()) {
-            System.out.println("[Excel] players.csv が見つかりません: " + playersCSV);
+        if (playersCSV == null || teamsCSV == null) {
+            System.out.println("[Excel] CSVが見つかりません: players.csv / teams.csv");
             return;
         }
 
@@ -208,10 +210,57 @@ public class ExcelLoaderService {
      */
     public static String toImageURL(String imageFile) {
         if (imageFile == null || imageFile.isBlank()) return null;
-        // すでにresources/が付いている場合はそのまま
-        String path = imageFile.startsWith("resources/") ? imageFile : RESOURCES + imageFile;
-        File f = new File(path);
-        return f.exists() ? f.toURI().toString() : null;
+        String file = imageFile.trim();
+
+        // 既にURLならそのまま返す
+        if (file.startsWith("file:") || file.startsWith("http://") || file.startsWith("https://")) {
+            return file;
+        }
+
+        // 絶対/相対パスが直接指定されている場合
+        File direct = new File(file);
+        if (direct.exists()) {
+            return direct.toURI().toString();
+        }
+
+        // プロジェクト実行時・Maven実行時の代表的な探索先
+        String[] dirs = {
+            "src/main/resources/images/players/",
+            "src/main/resources/images/uniforms/",
+            "src/main/resources/images/moves/",
+            "src/main/resources/images/emblems/",
+            "src/main/resources/",
+            "target/classes/images/players/",
+            "target/classes/images/uniforms/",
+            "target/classes/images/moves/",
+            "target/classes/images/emblems/",
+            "target/classes/",
+            "resources/images/players/",
+            "resources/images/uniforms/",
+            "resources/images/moves/",
+            "resources/images/emblems/",
+            "resources/",
+            ""
+        };
+        for (String d : dirs) {
+            File f = new File(d + file);
+            if (f.exists()) return f.toURI().toString();
+        }
+
+        // クラスパス探索（jar実行も考慮）
+        String normalized = file.startsWith("/") ? file.substring(1) : file;
+        String[] cpCandidates = {
+            "/" + normalized,
+            "/images/players/" + normalized,
+            "/images/uniforms/" + normalized,
+            "/images/moves/" + normalized,
+            "/images/emblems/" + normalized
+        };
+        for (String cp : cpCandidates) {
+            URL u = ExcelLoaderService.class.getResource(cp);
+            if (u != null) return u.toExternalForm();
+        }
+        return null;
     }
 
     /** 画像が存在するか確認 */
@@ -275,5 +324,19 @@ public class ExcelLoaderService {
         if (shirtNum == 518) base = 90;
 
         return Math.max(55, Math.min(90, base));
+    }
+
+    private String resolveDataCsvPath(String fileName) {
+        String[] candidates = {
+            "src/main/resources/" + DATA_DIR + fileName,
+            "target/classes/" + DATA_DIR + fileName,
+            RESOURCES + fileName,            // 旧配置互換
+            RESOURCES + DATA_DIR + fileName, // 旧配置+data
+            fileName
+        };
+        for (String c : candidates) {
+            if (new File(c).exists()) return c;
+        }
+        return null;
     }
 }

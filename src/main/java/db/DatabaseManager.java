@@ -246,6 +246,7 @@ public class DatabaseManager {
 
     /** 既存DBへのカラム追加（エラーは無視） */
     private void runMigrations(Statement stmt) {
+        safeAlter(stmt, "ALTER TABLE clubs   ADD COLUMN weekly_salary_budget BIGINT NOT NULL DEFAULT 0");
         safeAlter(stmt, "ALTER TABLE clubs   ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT '#ff6b00'");
         safeAlter(stmt, "ALTER TABLE clubs   ADD COLUMN formation VARCHAR(20) NOT NULL DEFAULT '4-4-2'");
         safeAlter(stmt, "ALTER TABLE clubs   ADD COLUMN breed VARCHAR(100) NOT NULL DEFAULT '柴犬'");
@@ -261,6 +262,11 @@ public class DatabaseManager {
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN retirement_announced INTEGER NOT NULL DEFAULT 0");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN reincarnation_season INTEGER NOT NULL DEFAULT -1");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN former_club_name VARCHAR(100) NOT NULL DEFAULT ''");
+
+        // 旧スキーマ互換: special_moves.player_id 必須だと現行INSERTが失敗するため NULL許可へ
+        if (DatabaseConfig.isMySql()) {
+            safeAlter(stmt, "ALTER TABLE special_moves MODIFY COLUMN player_id INTEGER NULL");
+        }
     }
 
     private void safeAlter(Statement stmt, String sql) {
