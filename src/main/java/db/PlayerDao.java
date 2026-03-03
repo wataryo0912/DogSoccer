@@ -19,10 +19,11 @@ public class PlayerDao {
               (club_id, name, last_name, age, nationality, breed, position,
                overall, potential, salary, market_value, contract_years,
                speed, shooting, passing, defending, stamina, spirit,
+               goals, assists,
                uniform_name, shirt_number, dominant_foot, is_captain,
                player_role, retirement_announced, reincarnation_season, former_club_name,
-               image_file)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                image_file)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """;
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bind(ps, p, clubId);
@@ -65,6 +66,7 @@ public class PlayerDao {
                 name=?, last_name=?, age=?, nationality=?, breed=?, position=?,
                 overall=?, potential=?, salary=?, market_value=?, contract_years=?,
                 speed=?, shooting=?, passing=?, defending=?, stamina=?, spirit=?,
+                goals=?, assists=?,
                 uniform_name=?, shirt_number=?, dominant_foot=?, is_captain=?,
                 player_role=?, retirement_announced=?, reincarnation_season=?,
                 former_club_name=?, image_file=?
@@ -88,16 +90,18 @@ public class PlayerDao {
             ps.setInt   (15, p.getDefending());
             ps.setInt   (16, p.getStamina());
             ps.setInt   (17, p.getSpirit());
-            ps.setString(18, p.getUniformName());
-            ps.setInt   (19, p.getShirtNumber());
-            ps.setString(20, p.getDominantFoot());
-            ps.setInt   (21, p.isCaptain() ? 1 : 0);
-            ps.setString(22, p.getRole().name());
-            ps.setInt   (23, p.isRetirementAnnounced() ? 1 : 0);
-            ps.setInt   (24, p.getReincarnationSeason());
-            ps.setString(25, p.getFormerClubName());
-            ps.setString(26, p.getImageFile());
-            ps.setInt   (27, p.getId());
+            ps.setInt   (18, p.getGoals());
+            ps.setInt   (19, p.getAssists());
+            ps.setString(20, p.getUniformName());
+            ps.setInt   (21, p.getShirtNumber());
+            ps.setString(22, p.getDominantFoot());
+            ps.setInt   (23, p.isCaptain() ? 1 : 0);
+            ps.setString(24, p.getRole().name());
+            ps.setInt   (25, p.isRetirementAnnounced() ? 1 : 0);
+            ps.setInt   (26, p.getReincarnationSeason());
+            ps.setString(27, p.getFormerClubName());
+            ps.setString(28, p.getImageFile());
+            ps.setInt   (29, p.getId());
             ps.executeUpdate();
         }
     }
@@ -215,15 +219,17 @@ public class PlayerDao {
         ps.setInt   (16, p.getDefending());
         ps.setInt   (17, p.getStamina());
         ps.setInt   (18, p.getSpirit());
-        ps.setString(19, p.getUniformName());
-        ps.setInt   (20, p.getShirtNumber());
-        ps.setString(21, p.getDominantFoot());
-        ps.setInt   (22, p.isCaptain() ? 1 : 0);
-        ps.setString(23, p.getRole().name());
-        ps.setInt   (24, p.isRetirementAnnounced() ? 1 : 0);
-        ps.setInt   (25, p.getReincarnationSeason());
-        ps.setString(26, p.getFormerClubName());
-        ps.setString(27, p.getImageFile());
+        ps.setInt   (19, p.getGoals());
+        ps.setInt   (20, p.getAssists());
+        ps.setString(21, p.getUniformName());
+        ps.setInt   (22, p.getShirtNumber());
+        ps.setString(23, p.getDominantFoot());
+        ps.setInt   (24, p.isCaptain() ? 1 : 0);
+        ps.setString(25, p.getRole().name());
+        ps.setInt   (26, p.isRetirementAnnounced() ? 1 : 0);
+        ps.setInt   (27, p.getReincarnationSeason());
+        ps.setString(28, p.getFormerClubName());
+        ps.setString(29, p.getImageFile());
     }
 
     private List<Player> query(String sql) throws SQLException {
@@ -256,6 +262,8 @@ public class PlayerDao {
         p.setStats(rs.getInt("speed"), rs.getInt("shooting"),
                    rs.getInt("passing"), rs.getInt("defending"), rs.getInt("stamina"));
         p.setSpirit    (rs.getInt   ("spirit"));
+        p.setGoals     (rs.getInt   ("goals"));
+        p.setAssists   (rs.getInt   ("assists"));
         p.setLastName  (rs.getString("last_name"));
         p.setUniformName(rs.getString("uniform_name"));
         p.setShirtNumber(rs.getInt  ("shirt_number"));

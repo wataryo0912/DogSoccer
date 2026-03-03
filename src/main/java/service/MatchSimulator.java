@@ -243,13 +243,17 @@ public class MatchSimulator {
                             + (activeMove != null ? activeMove.getPower() * 0.15 : 0);
                         if (chance(goalProb)) {
                             if (homeHasBall) homeScore++; else awayScore++;
+                            Player assister = getAssister(attTeam, scorer);
+                            String assistText = assister != null
+                                ? "（アシスト: " + assister.getFullName() + "）"
+                                : "";
                             MatchEvent ge = new MatchEvent(min, Type.GOAL,
                                 "⚽ ゴール！！ " + attTeam.getName() + "が得点！【"
-                                + (scorer != null ? scorer.getFullName() : "🐾") + "】",
+                                + (scorer != null ? scorer.getFullName() : "🐾") + "】" + assistText,
                                 homeHasBall, homeHasBall ? 0.98 : 0.02, 0.5,
                                 homeScore, awayScore, homePoss,
                                 shots, shotsOn, corners, fouls,
-                                scorer, null);
+                                scorer, null, assister);
                             setPositions(ge, pos); events.add(ge);
                         } else {
                             MatchEvent sv = new MatchEvent(min, Type.SAVE,
@@ -333,5 +337,36 @@ public class MatchSimulator {
             .filter(p -> p.getPosition() == Player.Position.FW)
             .findFirst()
             .orElse(squad.get(rng.nextInt(squad.size())));
+    }
+
+    private Player getAssister(Club club, Player scorer) {
+        List<Player> candidates = club.getSquad().stream()
+            .filter(p -> p != null && p.getId() != (scorer != null ? scorer.getId() : -1))
+            .toList();
+        if (candidates.isEmpty()) return null;
+
+        double total = 0.0;
+        double[] weights = new double[candidates.size()];
+        for (int i = 0; i < candidates.size(); i++) {
+            Player p = candidates.get(i);
+            double pos = switch (p.getPosition()) {
+                case MF -> 1.9;
+                case FW -> 1.3;
+                case DF -> 0.8;
+                case GK -> 0.2;
+            };
+            double w = Math.max(0.1, pos * (p.getPassing() * 0.8 + p.getOverall() * 0.2));
+            weights[i] = w;
+            total += w;
+        }
+        if (total <= 0.0) return candidates.get(rng.nextInt(candidates.size()));
+
+        double pick = rng.nextDouble() * total;
+        double acc = 0.0;
+        for (int i = 0; i < candidates.size(); i++) {
+            acc += weights[i];
+            if (pick <= acc) return candidates.get(i);
+        }
+        return candidates.get(candidates.size() - 1);
     }
 }

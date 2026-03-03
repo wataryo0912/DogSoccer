@@ -5,13 +5,12 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -24,6 +23,7 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import model.League;
@@ -52,6 +52,7 @@ public class MainMenuView extends BorderPane {
     private long lastNanos = 0L;
     private double animSeconds = 0.0;
     private final Map<BodyType, Image> actorSprites = new EnumMap<>(BodyType.class);
+    private final Map<String, Image> playerSpriteCache = new java.util.HashMap<>();
 
     // 練習コースの目印（コーン位置）
     private static final double[][] DRILL_POINTS = {
@@ -62,6 +63,12 @@ public class MainMenuView extends BorderPane {
         this.app = app;
         setStyle("-fx-background-color:#070713;");
         setPadding(new Insets(18));
+        // この画面上ではズーム系ジェスチャを無効化
+        addEventFilter(ZoomEvent.ANY, e -> e.consume());
+        addEventFilter(RotateEvent.ANY, e -> e.consume());
+        addEventFilter(ScrollEvent.ANY, e -> {
+            if (e.isControlDown() || e.isDirect() || e.getTouchCount() > 0) e.consume();
+        });
         setTop(buildClubHeader());
         setCenter(buildGeneratedTrainingPane());
         setBottom(buildBottomActions());
@@ -98,7 +105,8 @@ public class MainMenuView extends BorderPane {
         String rank = MainApp.leagueManager.getRankText(MainApp.playerClub);
         String leagueText = league == null ? "所属リーグ不明" : league.getTier().getDisplayName();
         Label info = new Label("順位: " + rank + "  |  " + leagueText);
-        info.setStyle("-fx-font-size:12px;-fx-text-fill:rgba(255,255,255,0.75);");
+        info.setStyle("-fx-font-size:12px;-fx-text-fill:rgba(255,255,255,0.75);-fx-cursor:hand;");
+        info.setOnMouseClicked(e -> app.showStandingsView());
         text.getChildren().addAll(club, info);
 
         Region spacer = new Region();
@@ -108,7 +116,7 @@ public class MainMenuView extends BorderPane {
         scheduleBtn.setStyle("-fx-background-color:#1b1b35;-fx-text-fill:#ffffff;"
             + "-fx-font-size:11px;-fx-font-weight:bold;-fx-background-radius:8;"
             + "-fx-padding:4 10;-fx-cursor:hand;");
-        scheduleBtn.setOnAction(e -> openScheduleDialog());
+        scheduleBtn.setOnAction(e -> app.showScheduleView());
 
         SeasonManager season = MainApp.season;
         int weekInMonth = ((season.getCurrentWeek() - 1) % 4) + 1;
@@ -127,8 +135,16 @@ public class MainMenuView extends BorderPane {
         BorderPane.setMargin(area, new Insets(14, 0, 14, 0));
 
         Canvas canvas = new Canvas(1100, 430);
-        canvas.widthProperty().bind(area.widthProperty());
-        canvas.heightProperty().bind(area.heightProperty());
+        // Canvasをレイアウト計算対象から外し、親子サイズの循環参照を避ける。
+        canvas.setManaged(false);
+        area.widthProperty().addListener((obs, ov, nv) ->
+            canvas.setWidth(Math.max(1.0, nv.doubleValue())));
+        area.heightProperty().addListener((obs, ov, nv) ->
+            canvas.setHeight(Math.max(1.0, nv.doubleValue())));
+        Rectangle clip = new Rectangle();
+        clip.widthProperty().bind(area.widthProperty());
+        clip.heightProperty().bind(area.heightProperty());
+        area.setClip(clip);
         // 中央演出は操作不要。クリック系の当たり判定を持たせない
         canvas.setMouseTransparent(true);
         area.setMouseTransparent(false);
@@ -146,8 +162,13 @@ public class MainMenuView extends BorderPane {
 
         area.getChildren().addAll(canvas, title, subtitle);
 
-        initTrainees();
-        startTrainingAnimation(canvas);
+        // レイアウト確定後にアニメーション開始（canvas が 0→実寸に変わるズーム防止）
+        javafx.application.Platform.runLater(() -> {
+            canvas.setWidth(Math.max(1.0, area.getWidth()));
+            canvas.setHeight(Math.max(1.0, area.getHeight()));
+            initTrainees();
+            startTrainingAnimation(canvas);
+        });
         return area;
     }
 
@@ -166,12 +187,12 @@ public class MainMenuView extends BorderPane {
         buttons.setVgap(10);
         buttons.setPrefWrapLength(1040);
         buttons.getChildren().addAll(
-            makeMenuButton("📊  順位表", "#8a7df0", this::openRankingPlaceholder),
-            makeMenuButton("🏋️  練習", "#3a7bd5", app::showWeeklyView),
-            makeMenuButton("🧩  人事", "#f08a24", () -> app.setCenterView(new ScoutView(app))),
-            makeMenuButton("🧠  編成", "#5cab6f", () -> app.setCenterView(new SquadView(app))),
-            makeMenuButton("🏛️  クラブ管理", "#b189ff", () -> app.setCenterView(new FinanceView(app))),
-            makeMenuButton("📅  日程進行", "#4a7a35", app::showWeeklyView)
+            makeMenuButton("📅  次週のスケジュール", "#8a7df0", app::showScheduleView),
+            makeMenuButton("🏋️  練習", "#3a7bd5", app::showTrainingView),
+            makeMenuButton("🧩  人事", "#f08a24", app::showPersonnelView),
+            makeMenuButton("🧠  編成", "#5cab6f", app::showSquadView),
+            makeMenuButton("🏛️  クラブ管理", "#b189ff", app::showClubView),
+            makeMenuButton("⏭️  日程進行", "#4a7a35", app::showWeeklyView)
         );
 
         panel.getChildren().addAll(title, buttons);
@@ -191,28 +212,6 @@ public class MainMenuView extends BorderPane {
         return btn;
     }
 
-    private void openRankingPlaceholder() {
-        Alert info = new Alert(Alert.AlertType.INFORMATION);
-        info.setTitle("順位表");
-        info.setHeaderText("順位表画面");
-        info.setContentText("順位表の専用画面は次の実装で追加します。");
-        info.showAndWait();
-    }
-
-    private void openScheduleDialog() {
-        Dialog<Void> dlg = new Dialog<>();
-        dlg.setTitle("スケジュール一覧");
-        dlg.setHeaderText("シーズンスケジュール");
-        dlg.getDialogPane().getButtonTypes().setAll(
-            new ButtonType("閉じる", ButtonBar.ButtonData.OK_DONE)
-        );
-        ScheduleView sv = new ScheduleView(MainApp.season, MainApp.playerClub.getName());
-        sv.setPrefSize(760, 520);
-        dlg.getDialogPane().setContent(sv);
-        dlg.getDialogPane().setPrefSize(800, 600);
-        dlg.showAndWait();
-    }
-
     // ── 自動生成トレーニングアニメーション ─────────────────────
     private void initTrainees() {
         trainees.clear();
@@ -223,10 +222,13 @@ public class MainMenuView extends BorderPane {
         for (int i = 0; i < limit; i++) {
             Player p = src.get(i);
             TraineeActor a = new TraineeActor();
-            a.name = shortName(p.getUniformName().isBlank() ? p.getName() : p.getUniformName());
+            String uniform = p.getUniformName().isBlank() ? p.getName() : p.getUniformName();
+            a.uniformName = uniform;
+            a.name = shortName(uniform);
             a.bodyType = classifyBodyType(p.getBreed());
             a.scale = bodyScale(a.bodyType);
-            a.sprite = loadBodySprite(a.bodyType);
+            a.sprite = loadPlayerBodySprite(uniform);
+            if (a.sprite == null) a.sprite = loadBodySprite(a.bodyType);
             a.speed = (65 + random.nextDouble() * 34) / a.scale;
             a.tint = Color.hsb((i * 41) % 360, 0.62, 0.95);
             a.kickCooldown = 0.5 + random.nextDouble() * 0.8;
@@ -285,6 +287,32 @@ public class MainMenuView extends BorderPane {
             }
         } catch (Exception ignored) {}
         actorSprites.put(type, null);
+        return null;
+    }
+
+    private Image loadPlayerBodySprite(String uniformName) {
+        if (uniformName == null || uniformName.isBlank()) return null;
+        String key = uniformName.trim().toUpperCase();
+        if (playerSpriteCache.containsKey(key)) return playerSpriteCache.get(key);
+
+        String lower = key.toLowerCase();
+        String[] candidates = {
+            "/images/training/players/" + lower + ".png",
+            "/images/training/players/" + key + ".png",
+            "/images/training/players/actor_" + lower + ".png",
+            "/images/training/players/full_" + lower + ".png"
+        };
+        for (String c : candidates) {
+            try {
+                URL url = MainMenuView.class.getResource(c);
+                if (url != null) {
+                    Image img = new Image(url.toExternalForm(), true);
+                    playerSpriteCache.put(key, img);
+                    return img;
+                }
+            } catch (Exception ignored) {}
+        }
+        playerSpriteCache.put(key, null);
         return null;
     }
 
@@ -560,6 +588,7 @@ public class MainMenuView extends BorderPane {
     private enum BodyType { SMALL, MEDIUM, LARGE }
 
     private static final class TraineeActor {
+        String uniformName;
         String name;
         BodyType bodyType;
         Image sprite;

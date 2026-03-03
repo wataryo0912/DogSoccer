@@ -4,6 +4,8 @@ import javafx.geometry.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import model.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * シーズンスケジュール一覧表示パネル
@@ -28,11 +30,18 @@ public class ScheduleView extends VBox {
         list.setStyle("-fx-padding:4 0;");
 
         int currentWeek = season.getCurrentWeek();
-
+        int currentSeason = season.getCurrentSeason();
+        Map<Integer, ScheduledMatch> scheduleByWeek = new HashMap<>();
         for (ScheduledMatch sm : season.getSchedule()) {
-            boolean isCurrent = sm.getWeek() == currentWeek;
-            boolean isPast    = sm.getWeek() < currentWeek;
-            boolean isPlayer  = sm.isPlayerMatch(playerClubName);
+            scheduleByWeek.put(sm.getWeek(), sm);
+        }
+
+        for (int week = 1; week <= SeasonManager.TOTAL_WEEKS; week++) {
+            ScheduledMatch sm = scheduleByWeek.get(week);
+            boolean hasMatch = sm != null;
+            boolean isCurrent = week == currentWeek;
+            boolean isPast    = week < currentWeek;
+            boolean isPlayer  = hasMatch && sm.isPlayerMatch(playerClubName);
 
             HBox row = new HBox(8);
             row.setAlignment(Pos.CENTER_LEFT);
@@ -46,48 +55,52 @@ public class ScheduleView extends VBox {
                 + "-fx-background-radius:6;"
                 + "-fx-border-color:" + border + ";-fx-border-radius:6;-fx-border-width:1;");
 
-            // 週番号バッジ
-            Label weekBadge = new Label("W" + sm.getWeek());
-            weekBadge.setStyle("-fx-font-size:9px;-fx-text-fill:rgba(255,255,255,0.3);"
-                + "-fx-min-width:28;-fx-alignment:CENTER-RIGHT;");
+            // 週表示（yy年目:mm月:w週）
+            int month = ((week - 1) / 4) + 1;
+            int weekInMonth = ((week - 1) % 4) + 1;
+            Label weekBadge = new Label(
+                String.format("%d年目:%d月:%d週", currentSeason, month, weekInMonth));
+            weekBadge.setStyle("-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.45);"
+                + "-fx-min-width:110;-fx-alignment:CENTER-LEFT;");
 
             // 状態アイコン
-            String stateIcon = sm.isPlayed() ? (
-                    sm.isPlayerMatch(playerClubName)
-                        ? (sm.isPlayerHome(playerClubName)
-                            ? (sm.getHomeGoals() > sm.getAwayGoals() ? "✅" : sm.getHomeGoals() == sm.getAwayGoals() ? "🟡" : "❌")
-                            : (sm.getAwayGoals() > sm.getHomeGoals() ? "✅" : sm.getAwayGoals() == sm.getHomeGoals() ? "🟡" : "❌"))
-                        : "─"
-                ) : isCurrent ? "▶" : "○";
+            String stateIcon = hasMatch
+                ? (sm.isPlayed() ? (
+                        sm.isPlayerMatch(playerClubName)
+                            ? (sm.isPlayerHome(playerClubName)
+                                ? (sm.getHomeGoals() > sm.getAwayGoals() ? "✅" : sm.getHomeGoals() == sm.getAwayGoals() ? "🟡" : "❌")
+                                : (sm.getAwayGoals() > sm.getHomeGoals() ? "✅" : sm.getAwayGoals() == sm.getHomeGoals() ? "🟡" : "❌"))
+                            : "─"
+                    ) : isCurrent ? "▶" : "○")
+                : (isCurrent ? "▶" : (isPast ? "·" : " "));
             Label stateLabel = new Label(stateIcon);
             stateLabel.setStyle("-fx-font-size:12px;-fx-min-width:18;");
 
-            // チーム名
-            String homeText = sm.getHomeClubName();
-            String awayText = sm.getAwayClubName();
-            String homeColor = sm.getHomeClubName().equals(playerClubName)
-                ? MainApp.playerClub.getColor() : "rgba(255,255,255,0.6)";
-            String awayColor = sm.getAwayClubName().equals(playerClubName)
-                ? MainApp.playerClub.getColor() : "rgba(255,255,255,0.6)";
+            String text;
+            String textColor;
+            if (!hasMatch) {
+                text = "空白";
+                textColor = "rgba(255,255,255,0.28)";
+            } else if (sm.isPlayerMatch(playerClubName)) {
+                String opponent = sm.getOpponentName(playerClubName);
+                String homeAway = sm.isPlayerHome(playerClubName) ? "HOME" : "AWAY";
+                if (sm.isPlayed()) {
+                    text = String.format("VS %s [%s]  (%s)", opponent, homeAway, sm.getScoreText());
+                } else {
+                    text = String.format("VS %s [%s]", opponent, homeAway);
+                }
+                textColor = MainApp.playerClub.getColor();
+            } else {
+                text = sm.getHomeClubName() + " vs " + sm.getAwayClubName();
+                textColor = "rgba(255,255,255,0.6)";
+            }
 
-            Label homeLbl = new Label(homeText);
-            homeLbl.setStyle("-fx-font-size:11px;-fx-text-fill:" + homeColor + ";"
-                + "-fx-font-weight:" + (isPlayer ? "bold" : "normal") + ";");
-            Label vsLbl = new Label(sm.isPlayed() ? sm.getScoreText() : "vs");
-            vsLbl.setStyle("-fx-font-size:11px;-fx-text-fill:rgba(255,255,255,0.3);"
-                + "-fx-min-width:30;-fx-alignment:CENTER;");
-            Label awayLbl = new Label(awayText);
-            awayLbl.setStyle("-fx-font-size:11px;-fx-text-fill:" + awayColor + ";"
+            Label matchLabel = new Label(text);
+            matchLabel.setStyle("-fx-font-size:11px;-fx-text-fill:" + textColor + ";"
                 + "-fx-font-weight:" + (isPlayer ? "bold" : "normal") + ";");
 
-            row.getChildren().addAll(weekBadge, stateLabel, homeLbl, vsLbl, awayLbl);
+            row.getChildren().addAll(weekBadge, stateLabel, matchLabel);
             list.getChildren().add(row);
-        }
-
-        if (season.getSchedule().isEmpty()) {
-            Label empty = new Label("スケジュールが生成されていません");
-            empty.setStyle("-fx-font-size:12px;-fx-text-fill:rgba(255,255,255,0.3);");
-            list.getChildren().add(empty);
         }
 
         scroll.setContent(list);

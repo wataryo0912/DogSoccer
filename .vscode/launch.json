@@ -5,7 +5,8 @@
       "type": "java",
       "name": "Soccer Manager (GUI)",
       "request": "launch",
-      "mainClass": "main.GuiLauncher"
+      "mainClass": "main.GuiLauncher",
+      "vmArgs": "-Dglass.win.uiScale=100%"
     },
     {
       "type": "java",

@@ -59,6 +59,7 @@ public class Player extends Person {
     private long salary, marketValue;
     private int contractYears;
     private int speed, shooting, passing, defending, stamina, spirit;
+    private int goals, assists;
 
     // ── 感情システム（NEW） ────────────────────────────────────
     /** 感情パラメータ一式。コンストラクタで初期化される。 */
@@ -100,6 +101,8 @@ public class Player extends Person {
         this.captain       = false;
         this.imageFile     = "";
         this.spirit        = 75;
+        this.goals         = 0;
+        this.assists       = 0;
 
         // 感情システム初期値（犬種に応じた初期 loyalty を設定）
         this.emotion = new EmotionState();
@@ -233,6 +236,8 @@ public class Player extends Person {
     public int        getDefending()             { return defending; }
     public int        getStamina()               { return stamina; }
     public int        getSpirit()                { return spirit; } // DB互換維持
+    public int        getGoals()                 { return goals; }
+    public int        getAssists()               { return assists; }
     public EmotionState getEmotion()             { return emotion; }
 
     // ── Setters ──────────────────────────────────────────────
@@ -258,7 +263,11 @@ public class Player extends Person {
     public void setDefending(int v) { this.defending = Math.max(1, Math.min(99, v)); }
     public void setStamina  (int v) { this.stamina   = Math.max(1, Math.min(99, v)); }
     public void setSpirit   (int v) { this.spirit    = Math.max(1, Math.min(99, v)); }
+    public void setGoals(int v)                 { this.goals = Math.max(0, v); }
+    public void setAssists(int v)               { this.assists = Math.max(0, v); }
     public void setEmotion(EmotionState v) { this.emotion = v != null ? v : new EmotionState(); }
+    public void addGoal()                       { this.goals++; }
+    public void addAssist()                     { this.assists++; }
 
     public SpecialMove getSpecialMove()           { return specialMove; }
     public void setSpecialMove(SpecialMove v)     { this.specialMove = v; }

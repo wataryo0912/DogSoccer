@@ -150,6 +150,8 @@ public class DatabaseManager {
                 defending      INTEGER      NOT NULL DEFAULT 50,
                 stamina        INTEGER      NOT NULL DEFAULT 50,
                 spirit         INTEGER      NOT NULL DEFAULT 70,
+                goals          INTEGER      NOT NULL DEFAULT 0,
+                assists        INTEGER      NOT NULL DEFAULT 0,
                 uniform_name   VARCHAR(50)  NOT NULL DEFAULT '',
                 shirt_number   INTEGER      NOT NULL DEFAULT 0,
                 dominant_foot  VARCHAR(10)  NOT NULL DEFAULT '右',
@@ -258,6 +260,8 @@ public class DatabaseManager {
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN is_captain INTEGER NOT NULL DEFAULT 0");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN spirit INTEGER NOT NULL DEFAULT 70");
+        safeAlter(stmt, "ALTER TABLE players ADD COLUMN goals INTEGER NOT NULL DEFAULT 0");
+        safeAlter(stmt, "ALTER TABLE players ADD COLUMN assists INTEGER NOT NULL DEFAULT 0");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN player_role VARCHAR(20) NOT NULL DEFAULT 'REGISTERED'");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN retirement_announced INTEGER NOT NULL DEFAULT 0");
         safeAlter(stmt, "ALTER TABLE players ADD COLUMN reincarnation_season INTEGER NOT NULL DEFAULT -1");

@@ -78,10 +78,6 @@ public class WeeklyPlanView extends VBox {
     private Label  resultText;
     private Button advanceBtn;
     private FlowPane calendarPane;
-    private Button trainingBtn, matchBtn, transferBtn;
-
-    private Action selectedAction = null;
-    private String pendingResult  = null;
     private VBox   eventPanel;        // 週次イベント表示パネル
     private Label  eventTitleLabel;
     private Label  eventDescLabel;
@@ -126,7 +122,8 @@ public class WeeklyPlanView extends VBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         standingLabel = new Label();
-        standingLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#ffd700;");
+        standingLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#ffd700;-fx-cursor:hand;");
+        standingLabel.setOnMouseClicked(e -> app.showStandingsView());
         budgetLabel = new Label();
         budgetLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#a8dadc;");
 
@@ -146,16 +143,16 @@ public class WeeklyPlanView extends VBox {
     }
 
     private VBox buildActionPanel() {
-        VBox panel = new VBox(10);
+        VBox panel = new VBox(8);
         panel.setPrefWidth(280);
         panel.setMinWidth(280);
         panel.setStyle("-fx-background-color:#0d0d22;-fx-padding:20;"
             + "-fx-border-color:rgba(255,255,255,0.06);-fx-border-width:0 1 0 0;");
 
-        Label title = new Label("今週のアクション");
+        Label title = new Label("メニュー");
         title.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:rgba(255,255,255,0.55);");
 
-        // 試合週バナー（試合週のみ表示）
+        // 試合週バナー（試合週のみ表示、index=1 で updateMatchWeekBanner から参照）
         Label matchWeekBanner = new Label();
         matchWeekBanner.setStyle("""
             -fx-background-color:#1a3020;-fx-text-fill:#4a7a35;
@@ -167,19 +164,41 @@ public class WeeklyPlanView extends VBox {
         matchWeekBanner.setManaged(false);
         matchWeekBanner.setVisible(false);
 
-        trainingBtn = makeActionBtn("🏋️  練習", "#3a7bd5",
-            "全選手を練習\n若い選手は能力値UP！", Action.TRAINING);
-        matchBtn    = makeActionBtn("⚽  試合",  "#4a7a35",
-            "スケジュールにない特別試合\n（親善試合）", Action.MATCH);
-        transferBtn = makeActionBtn("🔄  移籍",  "#8b4513",
-            "移籍ウィンドウ期間のみ有効\n冬(1-4週) 夏(27-30週)", Action.TRANSFER);
+        // ── ナビゲーションボタン（仕様書通り 6ボタン）──────────
+        Button scheduleBtn  = makeNavBtn("📅  次週のスケジュール",
+            app::showScheduleView);
+        Button trainingNavBtn = makeNavBtn("🏋️  練習",
+            app::showTrainingView);
+        Button personnelBtn = makeNavBtn("👥  人事",
+            app::showPersonnelView);
+        Button formationBtn = makeNavBtn("📋  編成",
+            app::showSquadView);
+        Button clubBtn      = makeNavBtn("🏠  クラブ管理",
+            app::showClubView);
 
-        advanceBtn = new Button("次の週へ進む →");
+        // ── 週次イベントパネル ───────────────────────────────
+        eventPanel = new VBox(4);
+        eventPanel.setStyle("-fx-background-color:#0a0a1a;-fx-padding:10 12;"
+            + "-fx-background-radius:7;"
+            + "-fx-border-color:rgba(255,200,0,0.15);-fx-border-width:1;-fx-border-radius:7;");
+        eventTitleLabel = new Label("─ 今週のイベント ─");
+        eventTitleLabel.setStyle("-fx-font-size:11px;-fx-font-weight:bold;"
+            + "-fx-text-fill:rgba(255,200,0,0.6);");
+        eventDescLabel = new Label("");
+        eventDescLabel.setStyle("-fx-font-size:11px;-fx-text-fill:rgba(255,255,255,0.55);"
+            + "-fx-wrap-text:true;");
+        eventDescLabel.setWrapText(true);
+        eventEffectLabel = new Label("");
+        eventEffectLabel.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:#ffdd44;");
+        eventPanel.getChildren().addAll(eventTitleLabel, eventDescLabel, eventEffectLabel);
+        eventPanel.setVisible(true);
+
+        // ── 日程進行ボタン ────────────────────────────────────
+        advanceBtn = new Button("📅  日程進行");
         advanceBtn.setMaxWidth(Double.MAX_VALUE);
-        advanceBtn.setDisable(true);
-        advanceBtn.setStyle("-fx-background-color:#333;-fx-text-fill:#777;"
+        advanceBtn.setStyle("-fx-background-color:#4a7a35;-fx-text-fill:white;"
             + "-fx-font-size:13px;-fx-font-weight:bold;"
-            + "-fx-padding:11 18;-fx-background-radius:8;");
+            + "-fx-padding:11 18;-fx-background-radius:8;-fx-cursor:hand;");
         advanceBtn.setOnAction(e -> executeAdvance());
 
         resultPanel = new VBox(8);
@@ -191,10 +210,29 @@ public class WeeklyPlanView extends VBox {
 
         Region sp = new Region();
         VBox.setVgrow(sp, Priority.ALWAYS);
-        panel.getChildren().addAll(title, matchWeekBanner, trainingBtn, matchBtn,
-            transferBtn, sp, resultPanel, advanceBtn);
+        panel.getChildren().addAll(title, matchWeekBanner, scheduleBtn, trainingNavBtn,
+            personnelBtn, formationBtn, clubBtn, sp, eventPanel, resultPanel, advanceBtn);
         actionPanel = panel;
         return panel;
+    }
+
+    /** ナビゲーション用ボタン（画面遷移のみ、週を進めない） */
+    private Button makeNavBtn(String text, Runnable action) {
+        Button btn = new Button(text);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        String base = "-fx-background-color:rgba(255,255,255,0.04);-fx-text-fill:rgba(255,255,255,0.65);"
+            + "-fx-font-size:13px;-fx-padding:10 14;-fx-background-radius:8;"
+            + "-fx-border-color:rgba(255,255,255,0.1);-fx-border-width:1;-fx-border-radius:8;"
+            + "-fx-cursor:hand;-fx-alignment:CENTER-LEFT;";
+        String hover = "-fx-background-color:rgba(255,255,255,0.1);-fx-text-fill:#fff;"
+            + "-fx-font-size:13px;-fx-padding:10 14;-fx-background-radius:8;"
+            + "-fx-border-color:rgba(255,255,255,0.22);-fx-border-width:1;-fx-border-radius:8;"
+            + "-fx-cursor:hand;-fx-alignment:CENTER-LEFT;";
+        btn.setStyle(base);
+        btn.setOnAction(e -> action.run());
+        btn.setOnMouseEntered(ev -> btn.setStyle(hover));
+        btn.setOnMouseExited(ev  -> btn.setStyle(base));
+        return btn;
     }
 
     private VBox buildSchedulePanel() {
@@ -205,85 +243,6 @@ public class WeeklyPlanView extends VBox {
         panel.getChildren().add(sv);
         VBox.setVgrow(panel, Priority.ALWAYS);
         return panel;
-    }
-
-    private Button makeActionBtn(String text, String color, String tooltip, Action action) {
-        Button btn = new Button(text);
-        btn.setMaxWidth(Double.MAX_VALUE);
-        String base = String.format(
-            "-fx-background-color:%s22;-fx-text-fill:%s;"
-            + "-fx-font-size:14px;-fx-font-weight:bold;"
-            + "-fx-padding:12 14;-fx-background-radius:9;"
-            + "-fx-border-color:%s44;-fx-border-width:1;-fx-border-radius:9;"
-            + "-fx-cursor:hand;-fx-alignment:CENTER-LEFT;", color, color, color);
-        String sel = String.format(
-            "-fx-background-color:%s;-fx-text-fill:white;"
-            + "-fx-font-size:14px;-fx-font-weight:bold;"
-            + "-fx-padding:12 14;-fx-background-radius:9;"
-            + "-fx-border-color:%s;-fx-border-width:2;-fx-border-radius:9;"
-            + "-fx-cursor:hand;-fx-alignment:CENTER-LEFT;", color, color);
-        btn.setStyle(base);
-        btn.setTooltip(new Tooltip(tooltip));
-        btn.setOnAction(e -> {
-            if (action == Action.MATCH) {
-                openMatchSelector(); return;
-            }
-            if (action == Action.TRANSFER && !season.canDoAction(action)) {
-                showInfo("⚠️ 移籍ウィンドウ外",
-                    "移籍は冬(第1〜4週)と夏(第27〜30週)のみ可能です。");
-                return;
-            }
-            selectAction(action, btn, base, sel);
-        });
-        btn.setOnMouseEntered(ev -> { if (selectedAction != action) btn.setStyle(base.replace(color+"22", color+"44")); });
-        btn.setOnMouseExited(ev ->  { if (selectedAction != action) btn.setStyle(base); });
-        return btn;
-    }
-
-    private void selectAction(Action action, Button btn, String base, String sel) {
-        resetActionButtons();
-        selectedAction = action;
-        btn.setStyle(sel);
-        advanceBtn.setDisable(false);
-        advanceBtn.setStyle("-fx-background-color:#4a7a35;-fx-text-fill:white;"
-            + "-fx-font-size:13px;-fx-font-weight:bold;"
-            + "-fx-padding:11 18;-fx-background-radius:8;-fx-cursor:hand;");
-    }
-
-    private void resetActionButtons() {
-        selectedAction = null; pendingResult = null;
-        advanceBtn.setDisable(true);
-        advanceBtn.setStyle("-fx-background-color:#333;-fx-text-fill:#777;"
-            + "-fx-font-size:13px;-fx-font-weight:bold;"
-            + "-fx-padding:11 18;-fx-background-radius:8;");
-    }
-
-    private void openMatchSelector() {
-        Dialog<String> dlg = new Dialog<>();
-        dlg.setTitle("⚽ 親善試合");
-        dlg.setHeaderText("対戦相手を選んでください（スケジュール外）");
-        ButtonType ok = new ButtonType("試合開始！", ButtonBar.ButtonData.OK_DONE);
-        dlg.getDialogPane().getButtonTypes().addAll(ok, ButtonType.CANCEL);
-        ComboBox<String> combo = new ComboBox<>();
-        MainApp.allClubs.stream()
-            .filter(c -> !c.getName().equals(MainApp.playerClub.getName()))
-            .forEach(c -> combo.getItems().add(c.getName() + "  (OVR "
-                + String.format("%.0f", c.getAverageOverall()) + ")"));
-        if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0));
-        VBox content = new VBox(10, new Label("対戦相手:"), combo);
-        content.setPadding(new Insets(16));
-        dlg.getDialogPane().setContent(content);
-        dlg.setResultConverter(bt -> bt == ok ? combo.getValue() : null);
-        dlg.showAndWait().ifPresent(sel -> {
-            if (sel != null) {
-                selectedAction = Action.MATCH;
-                pendingResult  = sel.split("  ")[0];
-                advanceBtn.setDisable(false);
-                advanceBtn.setStyle("-fx-background-color:#4a7a35;-fx-text-fill:white;"
-                    + "-fx-font-size:13px;-fx-font-weight:bold;"
-                    + "-fx-padding:11 18;-fx-background-radius:8;-fx-cursor:hand;");
-            }
-        });
     }
 
     // ─────────────────────────────────────────────────────────
@@ -357,49 +316,52 @@ public class WeeklyPlanView extends VBox {
     // 週進行ロジック
     // ─────────────────────────────────────────────────────────
     private void executeAdvance() {
-        if (selectedAction == null) return;
-        String result;
-        switch (selectedAction) {
-            case TRAINING  -> result = executeTraining();
-            case MATCH     -> { executeMatch(pendingResult); return; }
-            case TRANSFER  -> { openTransferView(); return; }
-            default        -> result = "─";
+        // 試合週: 「日程進行」が試合のトリガー（自動遷移は廃止）
+        if (season.isMatchWeek()) {
+            handleMatchWeekIfNeeded();
+            return;
         }
+        // 移籍ウィンドウ中: 移籍か練習かを選択
+        if (season.isTransferWindowOpen()) {
+            Alert dlg = new Alert(Alert.AlertType.CONFIRMATION);
+            dlg.setTitle("週の行動を選択");
+            dlg.setHeaderText("🔄 移籍ウィンドウ期間中です");
+            dlg.setContentText("今週は移籍活動と練習どちらを実施しますか？");
+            ButtonType transferType = new ButtonType("🔄 移籍活動へ", ButtonBar.ButtonData.YES);
+            ButtonType trainingType = new ButtonType("🏋️ 練習する",  ButtonBar.ButtonData.NO);
+            dlg.getButtonTypes().setAll(transferType, trainingType);
+            dlg.showAndWait().ifPresent(choice -> {
+                if (choice == transferType) openTransferView();
+                else                        runTrainingAndAdvance();
+            });
+            return;
+        }
+        // 通常週: 練習 + 週次イベント + 週進行
+        runTrainingAndAdvance();
+    }
+
+    /** 練習を実行して週を進める（通常週・移籍ウィンドウ練習選択時） */
+    private void runTrainingAndAdvance() {
+        String result = executeTraining();
         MainApp.financeService.processWeeklySalaries(MainApp.playerClub);
         MainApp.gameDataService.saveClub(MainApp.playerClub);
 
-        // ── 出場選手IDを収集（感情システム用） ──────────────
-        // 現状は練習=全員、試合=REGISTERED全員とみなす
-        // 将来は MatchSimulator から実際の出場IDを受け取る
         java.util.Set<Integer> playedIds = new java.util.HashSet<>();
-        boolean teamWon = false;
-        if (selectedAction == Action.TRAINING || selectedAction == Action.MATCH) {
-            MainApp.playerClub.getRegistered()
-                .forEach(p -> playedIds.add(p.getId()));
-            // 試合結果が result に入っているので「勝利」判定
-            if (result.contains("勝利") || result.contains("WIN")) teamWon = true;
-        }
+        MainApp.playerClub.getRegistered().forEach(p -> playedIds.add(p.getId()));
 
-        // ── 週次イベントを生成・適用（感情システム統合版） ───
         WeeklyEvent event = MainApp.weeklyEventService.generateAndApply(
             MainApp.playerClub,
             season.getCurrentWeek(),
             season.getCurrentSeason(),
             playedIds,
-            teamWon
+            false
         );
         showWeeklyEvent(event);
         MainApp.gameDataService.saveSquad(MainApp.playerClub);
 
-        // ── AIクラブの週次処理（感情・補強・harmony管理） ────
-        MainApp.leagueAIService.processAllClubs(
-            MainApp.allClubs,
-            season.getCurrentWeek()
-        );
+        MainApp.leagueAIService.processAllClubs(MainApp.allClubs, season.getCurrentWeek());
+        season.advanceWeek(Action.TRAINING, result, MainApp.playerClub.getBudget());
 
-        season.advanceWeek(selectedAction, result, MainApp.playerClub.getBudget());
-
-        // ── 翌週昇格の確定処理 ────────────────────────────
         java.util.List<String> promotions =
             MainApp.academyService.processPromotions(MainApp.playerClub);
         if (!promotions.isEmpty()) {
@@ -409,7 +371,6 @@ public class WeeklyPlanView extends VBox {
         }
 
         if (season.isSeasonOver()) { showSeasonEnd(); return; }
-        resetActionButtons();
         refresh();
         showResult(result);
     }
@@ -442,38 +403,8 @@ public class WeeklyPlanView extends VBox {
         return result;
     }
 
-    private String executeMatch(String opponentName) {
-        if (opponentName == null) return "試合未実施";
-        Club opp = MainApp.allClubs.stream()
-            .filter(c -> c.getName().equals(opponentName)).findFirst().orElse(null);
-        if (opp == null) return "対戦相手不明";
-
-        // 試合はMatchViewに遷移して実施
-        MatchView mv = new MatchView(MainApp.app);
-        // finalOppはラムダ外で宣言したeffectively final変数
-        final Club friendlyOpp = opp;
-        mv.setMatchResultCallback(events -> {
-            MatchEvent last         = events.get(events.size() - 1);
-            final int  finalHome    = last.getHomeScore();
-            final int  finalAway    = last.getAwayScore();
-            final String matchResult = String.format("vs %s  %d-%d",
-                friendlyOpp.getName(), finalHome, finalAway);
-            showPostMatchDialog(events, friendlyOpp.getName(), finalHome, finalAway, () -> {
-                MainApp.gameDataService.saveMatchResult(MainApp.playerClub, friendlyOpp, events);
-                MainApp.app.updateHeaderLabels();
-                MainApp.financeService.processWeeklySalaries(MainApp.playerClub);
-                MainApp.gameDataService.saveClub(MainApp.playerClub);
-                season.advanceWeek(Action.MATCH, matchResult, MainApp.playerClub.getBudget());
-                MainApp.app.showWeeklyView();
-            });
-        });
-        MainApp.app.setCenterView(mv);
-        mv.startMatch(opp);
-        return "試合中...";  // callbackで上書きされる
-    }
-
     // ─────────────────────────────────────────────────────────
-    // 試合週自動処理（SeasonManagerから呼ばれる）
+    // 試合週処理（日程進行ボタンから呼ばれる）
     // ─────────────────────────────────────────────────────────
     public void handleMatchWeekIfNeeded() {
         ScheduledMatch sm = season.getMatchForCurrentWeek();
@@ -719,14 +650,11 @@ public class WeeklyPlanView extends VBox {
         budgetLabel.setText("💰 ¥" + String.format("%,d", club.getBudget()));
         standingLabel.setText(String.format("🏆 %dpt  %dW-%dD-%dL",
             club.getPoints(), club.getWins(), club.getDraws(), club.getLosses()));
-        transferBtn.setOpacity(season.isTransferWindowOpen() ? 1.0 : 0.4);
+        // 試合週バナー更新（日程進行ボタンで試合を開始する方式に変更）
+        ScheduledMatch sm = season.getMatchForCurrentWeek();
+        if (sm != null) updateMatchWeekBanner(sm);
 
         refreshCalendar();
-
-        // 試合週なら自動で試合画面へ
-        if (season.isMatchWeek()) {
-            javafx.application.Platform.runLater(this::handleMatchWeekIfNeeded);
-        }
     }
 
     private void showInfo(String title, String msg) {

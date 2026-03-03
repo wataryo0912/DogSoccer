@@ -184,7 +184,13 @@ public class SeasonManager {
         seasonOver  = false;
         history.clear();
         // 全クラブの成績をリセット
-        allClubs.forEach(Club::resetRecord);
+        allClubs.forEach(c -> {
+            c.resetRecord();
+            c.getSquad().forEach(p -> {
+                p.setGoals(0);
+                p.setAssists(0);
+            });
+        });
         initSchedule(allClubs, playerClubName);
         // シーズン開始フック（引退チェック・転生処理）
         if (onSeasonStartHook != null) {

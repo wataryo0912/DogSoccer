@@ -30,6 +30,7 @@ public class MatchEvent {
     // ── 選手情報（背番号表示・必殺技用） ─────────────────────
     private final Player     triggerPlayer;   // イベントを起こした選手（nullの場合あり）
     private final SpecialMove specialMove;    // 発動した必殺技（SPECIAL_MOVEタイプ時のみ非null）
+    private final Player assistPlayer;        // 得点時アシスト（GOAL時のみ）
 
     // ── フル引数コンストラクタ ────────────────────────────────
     public MatchEvent(int minute, Type type, String message, boolean isHome,
@@ -37,6 +38,17 @@ public class MatchEvent {
                       int homeScore, int awayScore, int homePoss,
                       int[] shots, int[] shotsOn, int[] corners, int[] fouls,
                       Player triggerPlayer, SpecialMove specialMove) {
+        this(minute, type, message, isHome, ballX, ballY,
+             homeScore, awayScore, homePoss, shots, shotsOn, corners, fouls,
+             triggerPlayer, specialMove, null);
+    }
+
+    public MatchEvent(int minute, Type type, String message, boolean isHome,
+                      double ballX, double ballY,
+                      int homeScore, int awayScore, int homePoss,
+                      int[] shots, int[] shotsOn, int[] corners, int[] fouls,
+                      Player triggerPlayer, SpecialMove specialMove,
+                      Player assistPlayer) {
         this.minute        = minute;
         this.type          = type;
         this.message       = message;
@@ -52,6 +64,7 @@ public class MatchEvent {
         this.fouls         = fouls.clone();
         this.triggerPlayer = triggerPlayer;
         this.specialMove   = specialMove;
+        this.assistPlayer  = assistPlayer;
     }
 
     /** 後方互換コンストラクタ（選手・必殺技なし） */
@@ -80,5 +93,6 @@ public class MatchEvent {
     public int[]      getFouls()        { return fouls; }
     public Player     getTriggerPlayer(){ return triggerPlayer; }
     public SpecialMove getSpecialMove() { return specialMove; }
+    public Player     getAssistPlayer() { return assistPlayer; }
     public boolean    hasSpecialMove()  { return specialMove != null; }
 }

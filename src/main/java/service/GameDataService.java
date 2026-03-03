@@ -141,11 +141,16 @@ public class GameDataService {
                 corners[0], corners[1], fouls[0], fouls[1],
                 last.getHomePoss());
 
+            // ── 3.5 選手得点・アシスト反映 ─────────────────────
+            applyPlayerStats(events);
+
             // ── 4. クラブ成績の更新 ───────────────────────────
             homeClub.recordResult(hg, ag);
             awayClub.recordResult(ag, hg);
             clubDao.update(homeClub);
             clubDao.update(awayClub);
+            saveSquad(homeClub);
+            saveSquad(awayClub);
 
             // ── 5. リーグ順位表に記録 ─────────────────────────
             ui.MainApp.leagueManager.recordMatch(homeClub, awayClub, hg, ag);
@@ -162,6 +167,23 @@ public class GameDataService {
 
         } catch (SQLException e) {
             System.err.println("[DB] saveMatchResult エラー: " + e.getMessage());
+        }
+    }
+
+    private void applyPlayerStats(List<MatchEvent> events) {
+        if (events == null || events.isEmpty()) return;
+        for (MatchEvent e : events) {
+            if (e.getType() != MatchEvent.Type.GOAL) continue;
+
+            Player scorer = e.getTriggerPlayer();
+            if (scorer != null) scorer.addGoal();
+
+            Player assister = e.getAssistPlayer();
+            if (assister != null) {
+                if (scorer == null || assister.getId() != scorer.getId()) {
+                    assister.addAssist();
+                }
+            }
         }
     }
 

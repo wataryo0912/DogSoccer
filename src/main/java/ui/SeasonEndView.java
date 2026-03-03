@@ -387,6 +387,7 @@ public class SeasonEndView extends StackPane {
         playerClub.resetRecord();
         // 新シーズン開始
         season.startNewSeason(MainApp.allClubs, playerClub.getName());
+        MainApp.allClubs.forEach(MainApp.gameDataService::saveSquad);
         MainApp.app.showWeeklyView();
     }
 
@@ -411,6 +412,7 @@ public class SeasonEndView extends StackPane {
 
         // 新シーズン開始
         season.startNewSeason(MainApp.allClubs, newClub.getName());
+        MainApp.allClubs.forEach(MainApp.gameDataService::saveSquad);
         MainApp.app.updateHeaderLabels();
 
         Alert info = new Alert(Alert.AlertType.INFORMATION);

@@ -6,6 +6,8 @@ import db.SpecialMoveDao;
 import db.ImageDao;
 import javafx.application.Application;
 import javafx.geometry.Pos;
+import javafx.collections.ListChangeListener;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.*;
@@ -63,10 +65,18 @@ public class MainApp extends Application {
         scene.addEventFilter(ZoomEvent.ANY, e -> e.consume());
         scene.addEventFilter(RotateEvent.ANY, e -> e.consume());
         scene.addEventFilter(ScrollEvent.ANY, e -> {
-            if (e.isControlDown()) e.consume();
+            if (e.isControlDown() || e.isDirect() || e.getTouchCount() > 0 || e.isInertia()) e.consume();
         });
+        installZoomGuard(root);
+        root.centerProperty().addListener((obs, oldCenter, newCenter) -> installZoomGuard(newCenter));
+        installZoomGuard(root.getCenter());
         stage.setTitle("⚽ クラブ・ぶん助 SOCCER MANAGER 🐾");
         stage.setScene(scene);
+        stage.setResizable(true);
+        stage.setWidth(1280);
+        stage.setHeight(820);
+        stage.setMinWidth(900);
+        stage.setMinHeight(640);
         stage.show();
     }
 
@@ -200,7 +210,8 @@ public class MainApp extends Application {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         pointsLabel = new Label();
-        pointsLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#ffd700;");
+        pointsLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#ffd700;-fx-cursor:hand;");
+        pointsLabel.setOnMouseClicked(e -> showStandingsView());
         budgetLabel = new Label();
         budgetLabel.setStyle("-fx-font-size:12px;-fx-text-fill:#a8dadc;");
 
@@ -306,6 +317,34 @@ public class MainApp extends Application {
         root.setCenter(wv);
     }
 
+    public void showScheduleView() {
+        root.setCenter(new ScheduleScreenView(this));
+    }
+
+    public void showTrainingView() {
+        root.setCenter(new TrainingView(this));
+    }
+
+    public void showPersonnelView() {
+        root.setCenter(new PersonnelView(this));
+    }
+
+    public void showSquadView() {
+        root.setCenter(new SquadView(this));
+    }
+
+    public void showClubView() {
+        root.setCenter(new ClubView(this));
+    }
+
+    public void showMemberListView() {
+        root.setCenter(new MemberListView(this));
+    }
+
+    public void showStandingsView() {
+        root.setCenter(new StandingsView(this));
+    }
+
     public void setCenterView(javafx.scene.Node view) {
         root.setCenter(view);
     }
@@ -319,6 +358,30 @@ public class MainApp extends Application {
             showWeeklyView();
         }, true);
         root.setCenter(sv);
+    }
+
+    private void installZoomGuard(Node node) {
+        if (node == null) return;
+        node.scaleXProperty().addListener((obs, ov, nv) -> {
+            if (Math.abs(nv.doubleValue() - 1.0) > 0.0001) node.setScaleX(1.0);
+        });
+        node.scaleYProperty().addListener((obs, ov, nv) -> {
+            if (Math.abs(nv.doubleValue() - 1.0) > 0.0001) node.setScaleY(1.0);
+        });
+        node.translateXProperty().addListener((obs, ov, nv) -> {
+            if (Math.abs(nv.doubleValue()) > 0.0001) node.setTranslateX(0.0);
+        });
+        node.translateYProperty().addListener((obs, ov, nv) -> {
+            if (Math.abs(nv.doubleValue()) > 0.0001) node.setTranslateY(0.0);
+        });
+        node.getTransforms().addListener((ListChangeListener<? super javafx.scene.transform.Transform>) c -> {
+            if (!node.getTransforms().isEmpty()) node.getTransforms().clear();
+        });
+        node.setScaleX(1.0);
+        node.setScaleY(1.0);
+        node.setTranslateX(0.0);
+        node.setTranslateY(0.0);
+        if (!node.getTransforms().isEmpty()) node.getTransforms().clear();
     }
 
     public static void main(String[] args) { launch(args); }
